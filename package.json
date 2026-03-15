@@ -1,0 +1,49 @@
+{
+  "name": "@agentine/whisker",
+  "version": "0.1.0",
+  "description": "Drop-in template engine replacing mustache.js and handlebars",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agentine/whisker.git"
+  },
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    },
+    "./compat/mustache": {
+      "types": "./dist/esm/compat/mustache.d.ts",
+      "import": "./dist/esm/compat/mustache.js",
+      "require": "./dist/cjs/compat/mustache.js"
+    },
+    "./compat/handlebars": {
+      "types": "./dist/esm/compat/handlebars.d.ts",
+      "import": "./dist/esm/compat/handlebars.js",
+      "require": "./dist/cjs/compat/handlebars.js"
+    }
+  },
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "npm run build:esm && npm run build:cjs",
+    "build:esm": "tsc -p tsconfig.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^3.0.0"
+  }
+}

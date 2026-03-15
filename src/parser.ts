@@ -32,6 +32,8 @@ export interface SectionNode {
   type: NodeType.Section;
   name: string;
   children: ASTNode[];
+  rawBlock?: string;
+  delimiters?: [string, string];
 }
 
 export interface InvertedSectionNode {
@@ -65,12 +67,18 @@ export type ASTNode =
   | CommentNode
   | PartialNode;
 
-export function parse(tokens: Token[]): RootNode {
+export function parse(tokens: Token[], sourceTemplate?: string): RootNode {
   const root: RootNode = { type: NodeType.Root, children: [] };
-  const stack: { node: SectionNode | InvertedSectionNode; name: string }[] = [];
+  const stack: {
+    node: SectionNode | InvertedSectionNode;
+    name: string;
+    startIdx: number;
+  }[] = [];
   let current: ASTNode[] = root.children;
 
-  for (const token of tokens) {
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+
     switch (token.type) {
       case TokenType.Text:
         current.push({ type: NodeType.Text, value: token.value });
@@ -89,9 +97,10 @@ export function parse(tokens: Token[]): RootNode {
           type: NodeType.Section,
           name: token.value,
           children: [],
+          delimiters: token.delimiters,
         };
         current.push(node);
-        stack.push({ node, name: token.value });
+        stack.push({ node, name: token.value, startIdx: i });
         current = node.children;
         break;
       }
@@ -103,7 +112,7 @@ export function parse(tokens: Token[]): RootNode {
           children: [],
         };
         current.push(node);
-        stack.push({ node, name: token.value });
+        stack.push({ node, name: token.value, startIdx: i });
         current = node.children;
         break;
       }
@@ -117,6 +126,22 @@ export function parse(tokens: Token[]): RootNode {
           throw new Error(
             `Mismatched section tags: opened "${top.name}" but closed "${token.value}"`,
           );
+        }
+        // Extract raw block text for lambda support
+        if (top.node.type === NodeType.Section) {
+          const openToken = tokens[top.startIdx];
+          if (sourceTemplate && openToken.sourceEnd != null && token.sourceStart != null) {
+            top.node.rawBlock = sourceTemplate.slice(openToken.sourceEnd, token.sourceStart);
+          } else {
+            // Fallback: reconstruct from text tokens
+            let raw = '';
+            for (let j = top.startIdx + 1; j < i; j++) {
+              if (tokens[j].type === TokenType.Text) {
+                raw += tokens[j].value;
+              }
+            }
+            top.node.rawBlock = raw;
+          }
         }
         stack.pop();
         current =

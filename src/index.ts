@@ -35,11 +35,12 @@ export function render(
   partials?: Record<string, string | RenderFunction>,
 ): string {
   const tokens = tokenize(template);
-  const ast = parse(tokens);
+  const ast = parse(tokens, template);
   const fn = compile(ast, (name) => {
     if (partials && typeof partials[name] === 'string') {
-      const t = tokenize(partials[name] as string);
-      return parse(t);
+      const p = partials[name] as string;
+      const t = tokenize(p);
+      return parse(t, p);
     }
     return undefined;
   });

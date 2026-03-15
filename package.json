@@ -11,11 +11,19 @@
   "engines": {
     "node": ">=18"
   },
+  "bin": {
+    "whisker": "./dist/esm/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/esm/index.d.ts",
       "import": "./dist/esm/index.js",
       "require": "./dist/cjs/index.js"
+    },
+    "./stream": {
+      "types": "./dist/esm/stream.d.ts",
+      "import": "./dist/esm/stream.js",
+      "require": "./dist/cjs/stream.js"
     },
     "./compat/mustache": {
       "types": "./dist/esm/compat/mustache.d.ts",
@@ -39,10 +47,12 @@
     "build:esm": "tsc -p tsconfig.json",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "clean": "rm -rf dist",
-    "test": "vitest run"
+    "test": "vitest run",
+    "bench": "node --import tsx bench/bench.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.4.0",
     "vitest": "^3.0.0"
   }

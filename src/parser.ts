@@ -93,6 +93,8 @@ export function parse(tokens: Token[], sourceTemplate?: string): RootNode {
         break;
 
       case TokenType.SectionOpen: {
+        // For Handlebars: "each items" → name="each items", matchName="each"
+        const matchName = token.value.split(/\s/)[0];
         const node: SectionNode = {
           type: NodeType.Section,
           name: token.value,
@@ -100,19 +102,20 @@ export function parse(tokens: Token[], sourceTemplate?: string): RootNode {
           delimiters: token.delimiters,
         };
         current.push(node);
-        stack.push({ node, name: token.value, startIdx: i });
+        stack.push({ node, name: matchName, startIdx: i });
         current = node.children;
         break;
       }
 
       case TokenType.InvertedSectionOpen: {
+        const matchName = token.value.split(/\s/)[0];
         const node: InvertedSectionNode = {
           type: NodeType.InvertedSection,
           name: token.value,
           children: [],
         };
         current.push(node);
-        stack.push({ node, name: token.value, startIdx: i });
+        stack.push({ node, name: matchName, startIdx: i });
         current = node.children;
         break;
       }

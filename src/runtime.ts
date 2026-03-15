@@ -44,6 +44,35 @@ export class Context {
 
     return undefined;
   }
+
+  /** Return the top of the context stack */
+  top(): unknown {
+    return this.stack[this.stack.length - 1];
+  }
+
+  /** Lookup a name at a specific parent depth (for ../ references) */
+  lookupAtDepth(name: string, depth: number): unknown {
+    const targetIdx = this.stack.length - 1 - depth;
+    if (targetIdx < 0) return undefined;
+
+    if (name === '.') {
+      return this.stack[targetIdx];
+    }
+
+    const parts = name.split('.');
+    const frame = this.stack[targetIdx];
+    if (frame == null || typeof frame !== 'object' || Array.isArray(frame)) return undefined;
+
+    const obj = frame as Record<string, unknown>;
+    if (!(parts[0] in obj)) return undefined;
+
+    let val: unknown = obj[parts[0]];
+    for (let p = 1; p < parts.length; p++) {
+      if (val == null || typeof val !== 'object') return undefined;
+      val = (val as Record<string, unknown>)[parts[p]];
+    }
+    return val;
+  }
 }
 
 export function resolveValue(context: Context, name: string): unknown {

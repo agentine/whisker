@@ -24,6 +24,10 @@ export interface Token {
   sourceStart?: number;
   /** Active delimiters at this token (for lambda re-parsing) */
   delimiters?: [string, string];
+  /** Whitespace control: strip whitespace before this tag */
+  stripBefore?: boolean;
+  /** Whitespace control: strip whitespace after this tag */
+  stripAfter?: boolean;
 }
 
 const STANDALONE_TYPES = new Set([
@@ -43,6 +47,8 @@ interface RawTag {
   line: number;
   col: number;
   delimiters?: [string, string];
+  stripBefore?: boolean;
+  stripAfter?: boolean;
 }
 
 export function tokenize(
@@ -112,9 +118,26 @@ function extractTags(
     if (tagEnd === -1) break;
 
     let inner = template.slice(contentStart, tagEnd);
-    const innerTrimmed = inner.trim();
+    let innerTrimmed = inner.trim();
     let type: TokenType;
     let value: string;
+
+    if (innerTrimmed.length === 0) {
+      i = tagEnd + currentClose.length;
+      continue;
+    }
+
+    // Whitespace control: detect ~ at start/end
+    let stripBefore = false;
+    let stripAfter = false;
+    if (innerTrimmed.startsWith('~')) {
+      stripBefore = true;
+      innerTrimmed = innerTrimmed.slice(1).trim();
+    }
+    if (innerTrimmed.endsWith('~')) {
+      stripAfter = true;
+      innerTrimmed = innerTrimmed.slice(0, -1).trim();
+    }
 
     if (innerTrimmed.length === 0) {
       i = tagEnd + currentClose.length;
@@ -178,6 +201,8 @@ function extractTags(
       line,
       col,
       delimiters: type === TokenType.SectionOpen ? [currentOpen, currentClose] : undefined,
+      stripBefore: stripBefore || undefined,
+      stripAfter: stripAfter || undefined,
     });
 
     i = tagEnd + closeLen;
@@ -291,6 +316,8 @@ function buildTokens(template: string, tags: RawTag[]): Token[] {
         sourceEnd: tag.type === TokenType.SectionOpen ? tag.end : undefined,
         sourceStart: tag.type === TokenType.SectionClose ? tag.start : undefined,
         delimiters: tag.delimiters,
+        stripBefore: tag.stripBefore,
+        stripAfter: tag.stripAfter,
       });
 
       // Skip past the entire standalone line (up to and including the newline)
@@ -353,6 +380,8 @@ function buildTokens(template: string, tags: RawTag[]): Token[] {
         sourceEnd: tag.type === TokenType.SectionOpen || tag.type === TokenType.InvertedSectionOpen ? tag.end : undefined,
         sourceStart: tag.type === TokenType.SectionClose ? tag.start : undefined,
         delimiters: tag.delimiters,
+        stripBefore: tag.stripBefore,
+        stripAfter: tag.stripAfter,
       });
 
       advancePos(template.slice(pos, tag.end));
@@ -370,6 +399,9 @@ function buildTokens(template: string, tags: RawTag[]): Token[] {
     });
   }
 
+  // Apply whitespace control ({{~ and ~}})
+  applyWhitespaceControl(tokens);
+
   return tokens;
 
   function advancePos(text: string): void {
@@ -384,3 +416,26 @@ function buildTokens(template: string, tags: RawTag[]): Token[] {
   }
 }
 
+function applyWhitespaceControl(tokens: Token[]): void {
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token.type === TokenType.Text) continue;
+
+    // stripBefore: trim trailing whitespace (incl. newlines) from preceding text
+    if (token.stripBefore && i > 0 && tokens[i - 1].type === TokenType.Text) {
+      tokens[i - 1].value = tokens[i - 1].value.replace(/\s+$/, '');
+    }
+
+    // stripAfter: trim leading whitespace (incl. newlines) from following text
+    if (token.stripAfter && i + 1 < tokens.length && tokens[i + 1].type === TokenType.Text) {
+      tokens[i + 1].value = tokens[i + 1].value.replace(/^\s+/, '');
+    }
+  }
+
+  // Remove empty text tokens
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    if (tokens[i].type === TokenType.Text && tokens[i].value === '') {
+      tokens.splice(i, 1);
+    }
+  }
+}

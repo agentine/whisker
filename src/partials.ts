@@ -1,5 +1,4 @@
-// Partials registry — named, inline, dynamic partials
-// Placeholder for Phase 3
+// Partials registry — named, inline, dynamic partials, partial blocks
 
 export class PartialRegistry {
   private partials = new Map<string, string>();
@@ -26,5 +25,9 @@ export class PartialRegistry {
       result[k] = v;
     }
     return result;
+  }
+
+  clear(): void {
+    this.partials.clear();
   }
 }
